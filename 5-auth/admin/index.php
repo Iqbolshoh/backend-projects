@@ -1,12 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header('Location: ../login/');
-    exit;
-}
-
-if ($_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || $_SESSION['user']['role'] !== 'admin') {
     header('Location: ../login/');
     exit;
 }
@@ -29,7 +24,7 @@ if ($_SESSION['role'] !== 'admin') {
                 <div class="card shadow text-center">
                     <div class="card-body p-4">
                         <h1 class="mb-4">Welcome User</h1>
-                        <p class="mb-4"><b><?= $_SESSION['name'] ?></b> Welcome to our platform! Please login or sign up
+                        <p class="mb-4">Welcome to our platform! Please login or sign up
                             to continue.</p>
                         <div class="d-grid gap-2">
                             <a href="../logout/" class="btn btn-primary">Logout</a>
