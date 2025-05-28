@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login SweetAlert2</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 50px;
+        }
+
+        #loginForm input,
+        #loginForm button {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Kirish Formasi</h2>
+    <form id="loginForm">
+        <input type="text" name="username" placeholder="Foydalanuvchi nomi" required>
+        <input type="password" name="password" placeholder="Parol" required>
+        <button type="submit">Kirish</button>
+    </form>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            fetch('login.php', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    Swal.fire({
+                        icon: result.success ? 'success' : 'error',
+                        title: result.title,
+                        text: result.message
+                    });
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Xatolik!',
+                        text: 'Serverga ulanishda muammo yuz berdi 😵‍💫'
+                    });
+                    console.error('Fetch xatolik:', error);
+                });
+        });
+    </script>
+
+</body>
+
+</html>
