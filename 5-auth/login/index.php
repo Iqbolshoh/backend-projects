@@ -141,43 +141,42 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
 
             const formData = new FormData(this);
 
-            try {
-                const response = await fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: result.title,
-                        text: result.message,
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        if (result.redirect) {
-                            window.location.href = result.redirect;
-                        }
-                    });
-                } else {
+            fetch('', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: result.title,
+                            text: result.message,
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            if (result.redirect) {
+                                window.location.href = result.redirect;
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: result.title,
+                            text: result.message
+                        });
+                    }
+                })
+                .catch(error => {
                     Swal.fire({
                         icon: 'error',
-                        title: result.title || 'Xatolik',
-                        text: result.message || 'Noma’lum xato yuz berdi.'
+                        title: '❌ Tarmoq xatosi',
+                        text: 'Server bilan bog‘lanishda muammo yuz berdi.'
                     });
-                }
-            } catch (error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: '❌ Tarmoq xatosi',
-                    text: 'Server bilan bog‘lanishda muammo yuz berdi.'
+                    console.error('Fetch error:', error);
                 });
-                console.error('Fetch error:', error);
-            }
         });
     </script>
 </body>
