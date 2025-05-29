@@ -196,7 +196,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             icon: 'success',
                             title: result.title,
                             text: result.message,
-                            confirmButtonText: 'OK'
+                            confirmButtonText: 'OK',
+                            showConfirmButton: false,
+                            timer: 1500
                         }).then(() => {
                             if (result.redirect) {
                                 window.location.href = result.redirect;

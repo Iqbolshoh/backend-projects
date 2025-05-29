@@ -5,13 +5,13 @@
  */
 
 -- 1. Avvalgi versiyani tozalash (agar mavjud bo'lsa)
-DROP DATABASE IF EXISTS auth;
+DROP DATABASE IF EXISTS auth_db;
 
 -- 2. Yangi database yaratish
-CREATE DATABASE auth;
+CREATE DATABASE auth_db;
 
 -- 3. Database aktivlashtirish
-USE auth;
+USE auth_db;
 
 -- ==================== Users ====================
 CREATE TABLE users (
