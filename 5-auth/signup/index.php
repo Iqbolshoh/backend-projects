@@ -1,6 +1,9 @@
 <?php
 session_start();
 
+include "../config.php";
+$db = new Database();
+
 if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
     if ($_SESSION['user']['role'] === 'admin') {
         header('Location: ../admin/');
@@ -13,62 +16,91 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
     }
 }
 
-include "../config.php";
-$db = new Database();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] == "POST") {
-    if (!empty($_POST['name']) && !empty($_POST['username']) && !empty($_POST['password'])) {
-        if ($_POST['password'] !== $_POST['confirm_password']) {
-            exit("Parollar mos emas!");
-        }
+    $name = trim($_POST['name'] ?? '');
+    $username = strtolower(trim($_POST['username'] ?? ''));
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
 
-        $name = trim($_POST['name']);
-        $username = strtolower(trim($_POST['username']));
-        $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-        $role = "user"; // standart role
+    if (empty(trim($name)) || empty(trim($username)) || empty(trim($password))) {
+        echo json_encode([
+            'success' => false,
+            'title' => '⚠️ Diqqat!',
+            'message' => "Iltimos, barcha maydonlarni to‘ldiring!"
+        ]);
+        exit;
+    }
 
-        $id = $db->insert('users', [
+    if ($password !== $confirm_password) {
+        echo json_encode([
+            'success' => false,
+            'title' => '❌ Parollar mos emas!',
+            'message' => "Parollar bir xil bo‘lishi kerak!"
+        ]);
+        exit;
+    }
+
+    $existingUser = $db->select('users', '*', "username = ?", [$username], 's');
+    if (!empty($existingUser)) {
+        echo json_encode([
+            'success' => false,
+            'title' => '❌ Username band!',
+            'message' => "Bu username allaqachon mavjud, boshqa tanlang!"
+        ]);
+        exit;
+    }
+
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+    $role = 'user';
+
+    $id = $db->insert('users', [
+        'name' => $name,
+        'username' => $username,
+        'password' => $hashedPassword,
+        'role' => $role
+    ]);
+
+    if ($id) {
+        $_SESSION['loggedin'] = true;
+        $_SESSION['user'] = [
+            'id' => $id,
             'name' => $name,
             'username' => $username,
-            'password' => $password,
-            'role' => $role
+            'role' => $role,
+        ];
+
+        echo json_encode([
+            'success' => true,
+            'title' => '✅ Muvaffaqiyat!',
+            'message' => "Ro'yxatdan o'tdingiz!",
+            'redirect' => $role === 'admin' ? '../admin/' : '../'
         ]);
-
-        if ($id) {
-            $_SESSION['loggedin'] = true;
-            $_SESSION['user']['id'] = $id;
-            $_SESSION['user']['name'] = $name;
-            $_SESSION['user']['username'] = $username;
-            $_SESSION['user']['role'] = $role;
-
-            if ($_SESSION['user']['role'] === 'admin') {
-                header('Location: ../admin/');
-                exit;
-            } elseif ($_SESSION['user']['role'] === 'user') {
-                header('Location: ../');
-                exit;
-            } else {
-                exit("Bunday role mavjud emas!");
-            }
-        } else {
-            echo "Malumot qo'shishda xatolik!";
-        }
+        exit;
     } else {
-        echo "Iltimos, barcha maydonlarini to‘ldiring!";
+        echo json_encode([
+            'success' => false,
+            'title' => '❌ Xatolik yuz berdi!',
+            'message' => "Ma'lumotlar bazasiga yozishda muammo."
+        ]);
+        exit;
     }
-}
 
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sign Up Page</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-light">
@@ -79,32 +111,24 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                     <div class="card-body p-4">
                         <h2 class="text-center mb-4">Sign Up</h2>
 
-                        <?php if (isset($error)): ?>
-                            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-                        <?php endif; ?>
-                        <?php if (isset($success)): ?>
-                            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-                        <?php endif; ?>
-
-                        <form method="POST">
+                        <form id="signupForm" method="POST">
                             <div class="mb-3">
                                 <label for="name" class="form-label">Full Name</label>
                                 <input type="text" class="form-control" id="name" name="name"
-                                    placeholder="Enter full name" required>
+                                    placeholder="Enter full name" />
                             </div>
 
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
                                 <input type="text" class="form-control" id="username" name="username"
-                                    placeholder="Enter username" required>
+                                    placeholder="Enter username" />
                             </div>
 
-                            <!-- PASSWORD FIELD WITH TOGGLE -->
                             <div class="mb-3 position-relative">
                                 <label for="password" class="form-label">Password</label>
                                 <div class="input-group">
                                     <input type="password" id="password" class="form-control" name="password"
-                                        placeholder="Enter password" required>
+                                        placeholder="Enter password" />
                                     <button class="btn btn-outline-secondary" type="button"
                                         onclick="togglePassword('password')">
                                         <i class="fas fa-eye"></i>
@@ -112,12 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                                 </div>
                             </div>
 
-                            <!-- CONFIRM PASSWORD FIELD WITH TOGGLE -->
                             <div class="mb-3 position-relative">
                                 <label for="confirm_password" class="form-label">Confirm Password</label>
                                 <div class="input-group">
                                     <input type="password" id="confirm_password" class="form-control"
-                                        name="confirm_password" placeholder="Confirm password" required>
+                                        name="confirm_password" placeholder="Confirm password" />
                                     <button class="btn btn-outline-secondary" type="button"
                                         onclick="togglePassword('confirm_password')">
                                         <i class="fas fa-eye"></i>
@@ -128,19 +151,17 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
                             <button type="submit" class="btn btn-primary w-100">Sign Up</button>
                         </form>
 
-                        <p class="text-center mt-3">Already have an account? <a href="../login/">Login</a></p>
+                        <p class="text-center mt-3">
+                            Already have an account? <a href="../login/">Login</a>
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- BOOTSTRAP JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- PASSWORD TOGGLE FUNCTION -->
     <script>
         function togglePassword(fieldId) {
             const input = document.getElementById(fieldId);
@@ -149,14 +170,58 @@ if ($_SERVER['REQUEST_METHOD'] == "POST") {
 
             if (input.type === 'password') {
                 input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
             } else {
                 input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
         }
+
+        document.getElementById('signupForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch('', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: result.title,
+                        text: result.message,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        if (result.redirect) {
+                            window.location.href = result.redirect;
+                        }
+                    });
+                } else if (result.redirect) {
+                    window.location.href = result.redirect;
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: result.title || 'Error',
+                        text: result.message || 'Noma’lum xato yuz berdi.'
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '❌ Tarmoq xatosi',
+                    text: 'Server bilan bog‘lanishda muammo yuz berdi.'
+                });
+                console.error('Fetch error:', error);
+            }
+        });
     </script>
 </body>
 
